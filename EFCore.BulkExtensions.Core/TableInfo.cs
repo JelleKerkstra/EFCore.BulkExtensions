@@ -376,7 +376,7 @@ public class TableInfo
                               ? Activator.CreateInstance(propertyType)
                               : null; // when type does not have parameterless constructor, like String for example, then default value is 'null'
 
-            bool listHasAllDefaultValues = !entities.Any(a => a?.GetType().GetProperty(propertyWithDefaultValue.Name)?.GetValue(a, null)?.ToString() != instance?.ToString());
+            bool listHasAllDefaultValues = !entities.Any(a => GetPropertyUnambiguous(a?.GetType(), propertyWithDefaultValue.Name)?.GetValue(a, null)?.ToString() != instance?.ToString());
             // it is not feasible to have in same list simultaneously both entities groups With and Without default values, they are omitted OnInsert only if all have default values or if it is PK (like Guid DbGenerated)
             if (listHasAllDefaultValues || (PrimaryKeysPropertyColumnNameDict.ContainsKey(propertyWithDefaultValue.Name) && propertyType == typeof(Guid)))
             {
@@ -699,6 +699,25 @@ public class TableInfo
         }
     }
 
+    private static PropertyInfo? GetPropertyUnambiguous(Type? type, string name)
+    {
+        if (name == null) throw new ArgumentNullException(nameof(name));
+        if (type == null) return null;
+
+        while (type != null)
+        {
+            var property = type.GetProperty(name, BindingFlags.DeclaredOnly);
+
+            if (property != null)
+            {
+                return property;
+            }
+
+            type = type.BaseType;
+        }
+
+        return null;
+    }
 
     /// <summary>
     /// Validates the specified property list
